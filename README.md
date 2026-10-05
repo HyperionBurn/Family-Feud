@@ -128,6 +128,19 @@ Honest limits:
 - **Drops:** a dropped phone shows as disconnected after about 8 seconds (the relay's grace period, lowered from its default 30 s in `scripts/dev.mjs` and `scripts/serve.mjs`). The presenters then judge that face-off and you tap.
 - **Phone refresh:** a phone that refreshes forgets its pairing (it holds it in memory only) and pairs again with a new code.
 
+## Arcade hub mode (optional)
+
+This fork can run as a game inside the multi-game arcade hub (`airjam-rocket-arena`, `apps/arcade-hub`): players join the hub once, vote on the game, and the result lands on the hub's leaderboard. **Nothing changes unless the hub launched the page** (`?arcade=...&round=...&token=...&players=...` on the URL), so standalone use is exactly as above.
+
+How it fits a host-led game:
+- The hub's big screen embeds the **projector** (`/screen/local`). The hub opens the **console** (`/host`) in a second window it controls, so both pages share one browser partition and the existing projector channel keeps working.
+- The hub's players are split into two teams (stable for the round; sizes differ by at most one) and the team names are filled in. The console shows who is on which team and can still rename them.
+- Survey results are stored per browser **and per embedding page**: load them once from Setup inside the hub-launched console (or restore a backup there). They do not carry over from a console opened directly at this address.
+- When the game is over the console shows **Send the result to the arcade**. Nothing is sent automatically, so the final projector screen can be enjoyed first. A level game can be sent as a draw or played on with a tie-break first. The winning team shares first place; points and the leaderboard are the hub's.
+- Questions an earlier hub round used stay marked as used.
+
+Code: `src/arcade/` (`launch.ts` pure and tested in `tests/arcade.test.ts`, `session.ts`, `ArcadeBar.tsx`), plus small hooks in `useHostGame.ts`, `HostConsole.tsx`, `ScreenPage.tsx` and `persist.ts`.
+
 ## Survey data
 
 The 16 supplied questions are fixed (`data/templates/event_questions.pending.json`). Real answers are never committed or bundled; they live in the moderator's browser storage only.

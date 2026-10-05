@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { isLocalOnly } from "../public/url";
+import { ArcadeBar } from "../arcade/ArcadeBar";
 import { Guide } from "./Guide";
 import { LiveTab } from "./PlayTab";
 import { SetupTab } from "./SetupTab";
@@ -74,11 +75,16 @@ export function HostConsole() {
           <span className={`dot-status ${g.projector === "on" ? "" : g.projector === "off" ? "is-bad" : "is-idle"}`}>{PROJECTOR_TEXT[g.projector]}</span>
           {phoneMode && <span className={`dot-status ${room.status === "ready" ? "" : "is-bad"}`}>Phones {room.status === "ready" ? "online" : room.status === "connecting" ? "connecting" : "offline"}</span>}
           <button type="button" className="link-btn" data-tour="guide" onClick={startGuide}>Quick guide</button>
-          <a className="bi-button bi-button--outline host__btn" data-tour="projector" href={screenHref} target="gdg-ff-screen" rel="noopener">Open projector</a>
+          {g.arcade ? (
+            <span className="dot-status is-idle" data-tour="projector">Projector: the arcade screen</span>
+          ) : (
+            <a className="bi-button bi-button--outline host__btn" data-tour="projector" href={screenHref} target="gdg-ff-screen" rel="noopener">Open projector</a>
+          )}
         </div>
       </header>
 
       <div className="alerts">
+        {g.arcade && <ArcadeBar g={g} launch={g.arcade} />}
         {g.demo && <div className="alert alert--demo" role="status"><b>DEMO: INVENTED RESULTS.</b> Practice answers, not the survey.</div>}
         {g.saveStatus && !g.saveStatus.ok && (
           <div className="alert alert--bad" role="alert"><b>Not saved.</b> Browser storage failed ({g.saveStatus.error}). The game carries on in memory. Export a backup in Setup now.</div>

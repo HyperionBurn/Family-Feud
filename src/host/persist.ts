@@ -95,17 +95,21 @@ export interface SavedSession {
   packId: string;
   savedAt: number;
   session: Session;
+  /** The arcade hub round this game belongs to, when the hub launched it. */
+  arcadeRound?: string;
 }
 
 export function loadSession(): SavedSession | null {
   const raw = readJson(KEYS.session);
   if (!isObj(raw)) return null;
   const session = parseSession(raw.session);
-  return session && typeof raw.packId === "string" ? { packId: raw.packId, savedAt: Number(raw.savedAt) || 0, session } : null;
+  return session && typeof raw.packId === "string"
+    ? { packId: raw.packId, savedAt: Number(raw.savedAt) || 0, session, arcadeRound: typeof raw.arcadeRound === "string" ? raw.arcadeRound : undefined }
+    : null;
 }
 
-export const saveSession = (packId: string, session: Session): WriteResult =>
-  writeJson(KEYS.session, { packId, savedAt: Date.now(), session });
+export const saveSession = (packId: string, session: Session, arcadeRound?: string): WriteResult =>
+  writeJson(KEYS.session, { packId, savedAt: Date.now(), session, ...(arcadeRound ? { arcadeRound } : {}) });
 
 export const hasProgress = (s: Session): boolean =>
   s.state.roundsPlayed > 0 || s.state.round !== null || s.state.teams.A.score !== 0 || s.state.teams.B.score !== 0;

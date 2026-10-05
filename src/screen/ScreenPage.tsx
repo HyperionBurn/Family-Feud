@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { announceReady, currentLaunch } from "../arcade/launch";
 import { HEARTBEAT_MS, STALE_AFTER_MS, openChannel, type ChannelMessage, type ScreenSound } from "../public/channel";
 import type { TeamId } from "../engine/types";
 import type { PublicSnapshot } from "../public/types";
@@ -49,6 +50,12 @@ export function ScreenPage() {
 
   const sound: ScreenSound = !audio.unlocked ? "off" : audio.muted || quiet ? "muted" : "on";
   const soundRef = useRef(sound);
+
+  // When the arcade hub launched this screen, tell it the board is up so it can drop its loading splash.
+  useEffect(() => {
+    const launch = currentLaunch();
+    return launch ? announceReady(launch) : undefined;
+  }, []);
 
   useEffect(() => {
     const ch = openChannel((m: ChannelMessage) => {

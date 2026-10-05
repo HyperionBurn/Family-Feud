@@ -10,6 +10,8 @@ import { buzzerHandlers, publishSnapshot, useFeudStore } from "../game/store";
 import { HEARTBEAT_MS, STALE_AFTER_MS, openChannel, type ScreenSound } from "../public/channel";
 import { projectPublic } from "../public/project";
 import type { PublicSnapshot, RelayStatus } from "../public/types";
+import { currentLaunch } from "../arcade/launch";
+import { arcadeSession } from "../arcade/session";
 import { newId } from "../util/id";
 import { KEYS, freshSession, hasProgress, loadBackupPack, loadBuzzerMode, loadPack, loadPairs, loadSession, saveBuzzerMode, savePairs, saveSession, savePack, writeJson, type BuzzerMode, type SavedSession, type WriteResult } from "./persist";
 
@@ -31,11 +33,14 @@ export function useHostGame() {
   const host = useAirJamHost();
   // Calling the store hook mounts the SDK's host binding: state sync out to phones, buzzer presses in.
   useFeudStore.useActions();
+  // Set only when the arcade hub launched this console. Everything arcade-related is inert without it.
+  const arcade = useMemo(() => currentLaunch(), []);
   const [pack, setPack] = useState<Pack>(() => loadPack() ?? structuredClone(PENDING_PACK));
-  const [session, setSession] = useState<Session>(() => initialSession());
+  const [session, setSession] = useState<Session>(() => (arcade ? arcadeSession(arcade, loadSession()?.session ?? null) : initialSession()));
   const [resumeOffer, setResumeOffer] = useState<SavedSession | null>(() => {
     const s = loadSession();
-    return s && hasProgress(s.session) ? s : null;
+    // A game from an earlier hub round is history, not something to resume; a reload of this round's console is.
+    return s && hasProgress(s.session) && (!arcade || s.arcadeRound === arcade.round) ? s : null;
   });
   // A probe write at start so a broken browser store is visible straight away, not at the first save.
   const [saveStatus, setSaveStatus] = useState<WriteResult | null>(() => writeJson(KEYS.probe, 1));
@@ -84,8 +89,8 @@ export function useHostGame() {
     if (next.state.phase !== prev.phase || next.state.round?.roundId !== prev.round?.roundId) commitBuzzers(clearArm(buzzersRef.current));
     sessionRef.current = next;
     setSession(next);
-    if (!holdSave.current) setSaveStatus(saveSession(packRef.current.packId, next));
-  }, [commitBuzzers]);
+    if (!holdSave.current) setSaveStatus(saveSession(packRef.current.packId, next, arcade?.round));
+  }, [commitBuzzers, arcade]);
   const updatePack = useCallback((next: Pack) => {
     setSaveStatus(savePack(next, packRef.current)); // the pack being replaced is kept as a recoverable copy
     packRef.current = next;
@@ -100,7 +105,7 @@ export function useHostGame() {
   };
   const startFresh = () => {
     holdSave.current = false;
-    commit(freshSession());
+    commit(arcade ? arcadeSession(arcade, resumeOffer?.session ?? null) : freshSession());
     setResumeOffer(null);
   };
 
@@ -208,6 +213,7 @@ export function useHostGame() {
   };
 
   return {
+    arcade,
     host,
     pack,
     replacePack,
